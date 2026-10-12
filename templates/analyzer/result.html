@@ -1,0 +1,59 @@
+{% extends 'base.html' %}
+
+{% block title %}Result{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="card p-4">
+            <h3 class="mb-4">
+                <i class="bi bi-clipboard-check"></i> Analysis Result
+            </h3>
+
+
+            <div class="mb-4">
+                <label class="fw-bold text-muted">Text:</label>
+                <p class="border p-3 rounded bg-light mb-0">{{ obj.text }}</p>
+            </div>
+
+
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label class="fw-bold text-muted">Sentiment:</label><br>
+                    {% if obj.sentiment == 'positive' %}
+                        <span class="badge bg-success sentiment-badge">Positive 😊</span>
+                    {% else %}
+                        <span class="badge bg-danger sentiment-badge">Negative 😞</span>
+                    {% endif %}
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label class="fw-bold text-muted">Confidence:</label>
+                    <p class="fs-4 mb-0">{{ obj.confidence|floatformat:4 }}</p>
+                </div>
+            </div>
+
+
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label class="fw-bold text-muted">Latency:</label>
+                    <p class="mb-0">{{ obj.latency_ms|floatformat:2 }} ms</p>
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label class="fw-bold text-muted">Memory Usage:</label>
+                    <p class="mb-0">{{ obj.memory_mb|floatformat:2 }} MB</p>
+                </div>
+            </div>
+
+
+            <div class="mt-3">
+                <a href="{% url 'index' %}" class="btn btn-primary">
+                    <i class="bi bi-arrow-left"></i> Analyze Another
+                </a>
+                <a href="{% url 'history' %}" class="btn btn-outline-secondary">
+                    <i class="bi bi-clock-history"></i> View History
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
