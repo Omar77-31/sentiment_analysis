@@ -2,11 +2,12 @@ from django.shortcuts import render
 from django.views.generic import FormView, ListView
 from rest_framework.views import APIView
 from rest_framework.response import Response
+from rest_framework import status
 
 from .forms import AnalysisForm
 from .models import AnalysisResult
 from .services import analyze_text
-from .serializers import AnalysisResultSerializer
+from .serializers import AnalysisResultSerializer, AnalyzeRequestSerializer
 
 
 class IndexView(FormView):
@@ -16,9 +17,14 @@ class IndexView(FormView):
 
     def form_valid(self, form):
         text = form.cleaned_data["text"]
-        result = analyze_text(text)
-        obj = AnalysisResult.objects.create(text=text, **result)
-        return render(self.request, "analyzer/result.html", {"obj": obj})
+        try:
+            result = analyze_text(text)
+            obj = AnalysisResult.objects.create(text=text, **result)
+            return render(self.request, "analyzer/result.html", {"obj": obj})
+        except Exception as e:
+
+            form.add_error(None, f"Analysis failed: {str(e)}")
+            return self.form_invalid(form)
 
 
 class HistoryView(ListView):
@@ -31,10 +37,25 @@ class HistoryView(ListView):
 
 class AnalyzeAPIView(APIView):
     def post(self, request):
-        text = request.data.get("text", "")
-        if not text:
-            return Response({"error": "text is required"}, status=400)
 
-        result = analyze_text(text)
-        obj = AnalysisResult.objects.create(text=text, **result)
-        return Response(AnalysisResultSerializer(obj).data, status=201)
+        serializer = AnalyzeRequestSerializer(data=request.data)
+
+        if not serializer.is_valid():
+
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        text = serializer.validated_data["text"]
+
+        try:
+
+            result = analyze_text(text)
+            obj = AnalysisResult.objects.create(text=text, **result)
+
+            return Response(AnalysisResultSerializer(obj).data, status=status.HTTP_201_CREATED)
+
+        except Exception as e:
+
+            return Response(
+                {"error": "Model inference failed. Please try again later.", "details": str(e)},
+                status=status.HTTP_503_SERVICE_UNAVAILABLE
+            )

@@ -4,25 +4,42 @@ Django settings for config project.
 
 from pathlib import Path
 import os
+from django.core.exceptions import ImproperlyConfigured
 from dotenv import load_dotenv
 
-# Load environment variables from .env file
 load_dotenv()
 
-# Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 
-# SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = os.getenv('SECRET_KEY', 'django-insecure-default-key')
+# ============ Security ============
 
-# SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = os.getenv('DEBUG', 'True') == 'True'
+SECRET_KEY = os.getenv('SECRET_KEY')
+if not SECRET_KEY:
+    raise ImproperlyConfigured("SECRET_KEY environment variable is required.")
 
-ALLOWED_HOSTS = ['*']
+DEBUG = os.getenv('DEBUG', 'False').lower() == 'true'
+
+ALLOWED_HOSTS = [
+    h.strip()
+    for h in os.getenv('ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',')
+    if h.strip()
+]
+
+# Production-only hardening (ignored automatically when DEBUG=True)
+if not DEBUG:
+    SECURE_SSL_REDIRECT = True
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+    SECURE_HSTS_SECONDS = 31536000
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+    SECURE_HSTS_PRELOAD = True
+    SECURE_CONTENT_TYPE_NOSNIFF = True
+    SECURE_BROWSER_XSS_FILTER = True
+    X_FRAME_OPTIONS = 'DENY'
 
 
-# Application definition
+# ============ Applications ============
 
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -32,10 +49,10 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
 
-    # Third party apps
+    # Third party
     'rest_framework',
 
-    # Local apps
+    # Local
     'analyzer',
 ]
 
@@ -70,7 +87,8 @@ TEMPLATES = [
 WSGI_APPLICATION = 'config.wsgi.application'
 
 
-# Database - PostgreSQL from .env
+# ============ Database ============
+
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
@@ -83,7 +101,8 @@ DATABASES = {
 }
 
 
-# Password validation
+# ============ Password validation ============
+
 AUTH_PASSWORD_VALIDATORS = [
     {'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator'},
     {'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator'},
@@ -92,20 +111,46 @@ AUTH_PASSWORD_VALIDATORS = [
 ]
 
 
-# Internationalization
+# ============ i18n / tz ============
+
 LANGUAGE_CODE = 'en-us'
 TIME_ZONE = 'UTC'
 USE_I18N = True
 USE_TZ = True
 
 
-# Static files (CSS, JavaScript, Images)
+# ============ Static files ============
+# Only register STATICFILES_DIRS if the folder actually exists,
+# otherwise Django emits a warning on startup.
 STATIC_URL = 'static/'
-STATICFILES_DIRS = [BASE_DIR / 'static']
+_static_dir = BASE_DIR / 'static'
+if _static_dir.exists():
+    STATICFILES_DIRS = [_static_dir]
+STATIC_ROOT = BASE_DIR / 'staticfiles'
 
-# Default primary key field type
+
+# ============ DRF ============
+
+REST_FRAMEWORK = {
+    'DEFAULT_THROTTLE_CLASSES': [
+        'rest_framework.throttling.AnonRateThrottle',
+        'rest_framework.throttling.UserRateThrottle',
+    ],
+    'DEFAULT_THROTTLE_RATES': {
+        'anon': '30/hour',
+        'user': '200/hour',
+    },
+}
+
+
+# ============ Misc ============
+
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 
-# Sentiment Analysis Model
-SENTIMENT_MODEL = os.getenv('MODEL_NAME', 'CAMeL-Lab/bert-base-arabic-camelbert-da-sentiment')
+# ============ Sentiment model ============
+
+SENTIMENT_MODEL = os.getenv(
+    'MODEL_NAME',
+    'CAMeL-Lab/bert-base-arabic-camelbert-da-sentiment',
+)

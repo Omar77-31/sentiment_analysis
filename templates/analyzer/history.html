@@ -28,9 +28,11 @@
                     <td>{{ r.text|truncatechars:80 }}</td>
                     <td>
                         {% if r.sentiment == 'positive' %}
-                            <span class="badge bg-success">Positive 😊</span>
-                        {% else %}
-                            <span class="badge bg-danger">Negative 😞</span>
+                            <span class="badge bg-success">{{ r.get_sentiment_display }}</span>
+                        {% elif r.sentiment == 'negative' %}
+                            <span class="badge bg-danger">{{ r.get_sentiment_display }}</span>
+                        {% elif r.sentiment == 'neutral' %}
+                            <span class="badge bg-secondary">{{ r.get_sentiment_display }}</span>
                         {% endif %}
                     </td>
                     <td>{{ r.confidence|floatformat:4 }}</td>

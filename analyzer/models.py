@@ -3,8 +3,9 @@ from django.db import models
 
 class AnalysisResult(models.Model):
     SENTIMENT_CHOICES = [
-        ('positive', 'Positive '),
-        ('negative', 'Negative '),
+        ('positive', 'Positive'),
+        ('negative', 'Negative'),
+        ('neutral', 'Neutral'),
     ]
 
     text = models.TextField(verbose_name="Text")

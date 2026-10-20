@@ -1,10 +1,21 @@
 import os
 import time
+import logging
+
 import psutil
 import torch
 from functools import lru_cache
 from transformers import pipeline
 from django.conf import settings
+
+logger = logging.getLogger(__name__)
+
+
+LABEL_MAP = {
+    "positive": "positive",
+    "negative": "negative",
+    "neutral": "neutral",
+}
 
 
 @lru_cache(maxsize=1)
@@ -12,7 +23,7 @@ def get_sentiment_pipeline():
     """Load the model once and cache it in memory."""
     model_name = settings.SENTIMENT_MODEL
     device = 0 if torch.cuda.is_available() else -1
-    print(f"Loading model: {model_name} on {'GPU' if device == 0 else 'CPU'}...")
+    logger.info("Loading model: %s on %s...", model_name, "GPU" if device == 0 else "CPU")
     return pipeline(
         "sentiment-analysis",
         model=model_name,
@@ -22,11 +33,15 @@ def get_sentiment_pipeline():
 
 
 def normalize_label(label: str) -> str:
-    """Normalize model output labels to positive/negative only."""
-    label = str(label).lower()
-    if "pos" in label:
-        return "positive"
-    return "negative"
+    """Normalize model output label to positive / negative / neutral.
+
+    Raises ValueError for any unexpected label so a silent
+    mis-classification can never reach the database.
+    """
+    key = str(label).strip().lower()
+    if key not in LABEL_MAP:
+        raise ValueError(f"Unexpected model label: {label!r}")
+    return LABEL_MAP[key]
 
 
 def analyze_text(text: str) -> dict:
@@ -35,22 +50,21 @@ def analyze_text(text: str) -> dict:
     if not text:
         raise ValueError("Text is empty")
 
+
+    clf = get_sentiment_pipeline()
+
     process = psutil.Process(os.getpid())
     mem_before = process.memory_info().rss / 1024 / 1024
 
     start = time.perf_counter()
-    clf = get_sentiment_pipeline()
     raw = clf(text, truncation=True, max_length=512)[0]
     latency_ms = (time.perf_counter() - start) * 1000
 
     mem_after = process.memory_info().rss / 1024 / 1024
 
-    label = normalize_label(raw["label"])
-    confidence = float(raw["score"])
-
     return {
-        "sentiment": label,
-        "confidence": confidence,
+        "sentiment": normalize_label(raw["label"]),
+        "confidence": float(raw["score"]),
         "latency_ms": latency_ms,
         "memory_mb": mem_after - mem_before,
     }

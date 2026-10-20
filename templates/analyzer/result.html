@@ -21,9 +21,11 @@
                 <div class="col-md-6 mb-3">
                     <label class="fw-bold text-muted">Sentiment:</label><br>
                     {% if obj.sentiment == 'positive' %}
-                        <span class="badge bg-success sentiment-badge">Positive 😊</span>
-                    {% else %}
-                        <span class="badge bg-danger sentiment-badge">Negative 😞</span>
+                        <span class="badge bg-success sentiment-badge">{{ obj.get_sentiment_display }}</span>
+                    {% elif obj.sentiment == 'negative' %}
+                        <span class="badge bg-danger sentiment-badge">{{ obj.get_sentiment_display }}</span>
+                    {% elif obj.sentiment == 'neutral' %}
+                        <span class="badge bg-secondary sentiment-badge">{{ obj.get_sentiment_display }}</span>
                     {% endif %}
                 </div>
                 <div class="col-md-6 mb-3">
